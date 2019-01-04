@@ -1,3 +1,2 @@
-# ScikitLearn
-demos of scikit-learn package of Python
+demos of ML cases
 
