@@ -37,7 +37,7 @@ class FeatureSelector(object):
         return SelectKBest(chi2, k=k).fit_transform(self.X, self.y)
 
     def rfe_selector(self, num=3):
-        lr = LinearRegression()
+        lr = LinearRegression()    # 最好选取稳定性好一点的基学习器，
         rfe = RFE(lr, n_features_to_select=num)
         rfe.fit(self.X, self.y)
         return rfe

@@ -18,7 +18,6 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.linear_model import LinearRegression
 
 
-
 class FeatureSelector(object):
 
     def __init__(self, select_feature_num):
@@ -29,6 +28,7 @@ class FeatureSelector(object):
         self.feature_names = None
 
     def read_data(self, path=None, target=None, x=None, y=None, feature=None):
+        """可以从csv或xlsx中进行读取，也可以指定为DataFrame格式"""
         if path:
             if re.search(r'.csv', path):
                 data = pd.read_csv(path)
@@ -44,22 +44,33 @@ class FeatureSelector(object):
                 raise FileNotFoundError
 
         else:
-            self.X = x
-            self.y = y
-            self.feature_names = list(feature)
+            if isinstance(self.X, pd.DataFrame):
+                self.X = x
+                self.y = y
+                self.feature_names = self.X.columns
+            else:
+                self.feature_names = list(feature)
+                self.X = pd.DataFrame(x, columns=self.feature_names)
+                self.y = y
 
+    def variance_threshold(self, threshold=0):
         scaler = StandardScaler()
         self.X_std = scaler.fit_transform(self.X)
-
-    def variance_threshold(self):
         # 去除方差小的特征
-        var_sel = VarianceThreshold()
+        var_sel = VarianceThreshold(threshold=threshold)
         var_sel.fit_transform(self.X_std)
         feature_var = list(var_sel.variances_)
         features = dict(zip(self.feature_names, feature_var))
-        # print(features)
-        features = list(dict(sorted(features.items(), key=lambda d: d[1], reverse=True)))[:self.select_feature_num]
-        return set(features)
+        idx = var_sel.get_support()
+
+        # topK的特征
+        features_top = list(dict(sorted(features.items(), key=lambda d: d[1], reverse=True)))[:self.select_feature_num]
+        # 超过方差threshold的特征
+        feature_threshold = []
+        for feature, flag in zip(feature_names, idx):
+            if flag:
+                feature_threshold.append(feature)
+        return set(features_top) & set(feature_threshold)
 
     def select_k_best(self):
         # 单变量特征选取，注意卡方验证只适用于离散数据，而对于连续数值，需要用f_regression等
@@ -136,9 +147,11 @@ if __name__ == '__main__':
     data2 = load_iris()
     data2_X = data2["data"]
     data2_y = data2["target"]
-
     feature_names = data2["feature_names"]
+
     selection.read_data(x=data2_X, y=data2_y, feature=feature_names)
 
-    features2 = selection.return_feature_set(variance_threshold=False, select_k_best=True, rfe_select=True, tree_select=True)
-    print(features2)
+    # features2 = selection.return_feature_set(variance_threshold=False, select_k_best=True, rfe_select=True, tree_select=True)
+    # print(features2)
+    print(selection.variance_threshold())
+ 
